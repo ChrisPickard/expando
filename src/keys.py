@@ -1,55 +1,61 @@
 #! /usr/bin/env python
 
 import Quartz
-from logging import Logger, FileHandler
-from AppKit import NSKeyUp, NSSystemDefined, NSEvent
+import logging
+import AppKit
 from daemonize import Daemonize
 
 pid = "/tmp/expando.pid"
-fileHandler = FileHandler("/Users/pickardc/expando.txt")
-logger=Logger(name="Expando")
+logger = logging.getLogger("Expando")
+logger.setLevel(logging.DEBUG)
+logger.propagate = False
+fh = logging.FileHandler("/tmp/expando.log", "w")
+fh.setLevel(logging.DEBUG)
+logger.addHandler(fh)
+keep_fds = [fh.stream.fileno()]
 
 
 def keyboardTapCallback(proxy, type_, event, refcon):
     # Convert the Quartz CGEvent into something more useful
-    keyEvent = NSEvent.eventWithCGEvent_(event)
-    print "hello!"
+    keyEvent = AppKit.NSEvent.eventWithCGEvent_(event)
+    logger.debug( "hello!")
     # send the keys to expando
-    print keyEvent
+    logger.debug( keyEvent)
     logger.debug("keyEvent")
 
+
 def main():
+    logger.debug(keyboardTapCallback)
     # Set up a tap, with type of tap, location, options and event mask
     tap = Quartz.CGEventTapCreate(
         Quartz.kCGSessionEventTap, # Session level is enough for our needs
         Quartz.kCGHeadInsertEventTap, # Insert wherever, we do not filter
         Quartz.kCGEventTapOptionListenOnly, # Listening is enough
-        Quartz.CGEventMaskBit(Quartz.kCGEventLeftMouseDown), # NSSystemDefined for media keys
+        Quartz.CGEventMaskBit(AppKit.NSSystemDefined), # NSSystemDefined for media keys
         keyboardTapCallback,
         None
         )
-    print Quartz.kCGEventKeyUp
-    print "tapping"
+    logger.debug( Quartz.kCGEventKeyUp )
+    logger.debug( "tapping")
 
-    print tap
+    logger.debug( tap)
     runLoopSource = Quartz.CFMachPortCreateRunLoopSource(None, tap, 0)
-    print "run loop source"
+    logger.debug( "run loop source")
     Quartz.CFRunLoopAddSource(
         Quartz.CFRunLoopGetCurrent(),
         runLoopSource,
         Quartz.kCFRunLoopDefaultMode
         )
 
-    print "run loop"
+    logger.debug( "run loop")
     # Enable the tap
     Quartz.CGEventTapEnable(tap, True)
-    print "tap enabled"
+    logger.debug( "tap enabled")
     # and run! This won't return until we exit or are terminated.
     Quartz.CFRunLoopRun()
-    print "running"
+    logger.debug( "looping")
 
 
-logger.addHandler(fileHandler)
-daemon = Daemonize(app="Expando", pid=pid, action=main, verbose=True, logger=logger)
-print "running"
+logger.debug( "creation")
+daemon = Daemonize(app="Expando", pid=pid, action=main, keep_fds=keep_fds)
 daemon.start()

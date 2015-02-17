@@ -1,14 +1,20 @@
 #!/usr/bin/env python
 
-from time import sleep
+import logging
 from daemonize import Daemonize
 
-pid = "/tmp/expando.pid"
+pid = "/tmp/test.pid"
+logger = logging.getLogger("Expando")
+logger.setLevel(logging.DEBUG)
+logger.propagate = False
+fh = logging.FileHandler("/tmp/test.log", "w")
+fh.setLevel(logging.DEBUG)
+logger.addHandler(fh)
+keep_fds = [fh.stream.fileno()]
 
 
 def main():
-    while True:
-        print "hello"
+    logger.debug("Test")
 
-daemon = Daemonize(app="Expando", pid=pid, action=main)
+daemon = Daemonize(app="test_app", pid=pid, action=main, keep_fds=keep_fds)
 daemon.start()
